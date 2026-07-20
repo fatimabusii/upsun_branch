@@ -104,6 +104,23 @@ Mono** — white background, single indigo accent, IBM Plex Sans, borders
 instead of shadows, persistent left-rail navigation (a third distinct nav
 pattern, alongside app1's top nav and app2's slide-out sidebar).
 
+**Filter bar (added per client follow-up request):** every page now
+responds live to three parameter groups — **Date Period** (quarter,
+month, or custom range), **Region → Country → Province** (cascading
+geography), and **Substance** (multi-select) — collapsed under a "Show
+filters" toggle at the top of every page. This required a real
+architecture change: app3 originally served pre-aggregated data from
+several fixed backend endpoints; it now serves the full row-level
+dataset once (`/api/records` + `/api/meta`) and every chart/table
+recomputes client-side whenever a filter changes. Fine at this dataset
+size (1,600 rows) — would need server-side filtering at real production
+scale.
+
+**Geography note:** the original dataset only had African countries, which
+would have made a "Region" filter meaningless (nothing to actually filter
+by). It's now expanded to include a few Americas and Asia countries (matching
+app4's model) purely so Region filtering has something real to demonstrate.
+
 New capabilities specific to this brief:
 
 | Page | What it covers |
