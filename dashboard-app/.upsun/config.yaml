@@ -1,0 +1,23 @@
+applications:
+  dashboard:
+    type: 'golang:1.22'
+
+    hooks:
+      build: |
+        go build -o bin/app .
+
+    web:
+      upstream:
+        socket_family: tcp
+        protocol: http
+      commands:
+        start: ./bin/app
+      locations:
+        '/':
+          allow: false
+          passthru: true
+
+routes:
+  "https://{default}/":
+    type: upstream
+    upstream: "dashboard:http"
