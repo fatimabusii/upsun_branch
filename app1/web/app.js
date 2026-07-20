@@ -24,7 +24,7 @@ const Landing = {
         </div>
         <div class="tile">
           <div class="label">Completion Trend ({{ summary.completionRate }}% overall)</div>
-          <div style="height: 90px; margin-top: 8px;">
+          <div style="height: 90px; margin-top: 8px; overflow: hidden;">
             <chart-widget endpoint="/api/trends" path="months" type="line" compact></chart-widget>
           </div>
         </div>

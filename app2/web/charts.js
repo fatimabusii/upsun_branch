@@ -16,7 +16,7 @@ Vue.component('chart-widget', {
     compact: { type: Boolean, default: false },
   },
   template: `
-    <div class="chart-wrap">
+    <div class="chart-wrap" :class="{ compact: compact }">
       <p v-if="loading" class="loading">Loading chart…</p>
       <canvas v-show="!loading" ref="canvas"></canvas>
     </div>
