@@ -136,11 +136,58 @@ New capabilities specific to this brief:
 ## A note on resources
 
 Each app gets its own small container (0.5 CPU / 224MB by default going by
-your earlier deploy logs). Three apps in one project uses 3x that. If
+your earlier deploy logs). Four apps in one project uses 4x that. If
 your Upsun plan has a resource ceiling, this may be worth checking before
 deploying — Upsun will tell you plainly in the build log if a plan limit
 is hit, and the fix is just requesting more resources or upgrading plan
 tier, not a code change.
+
+## App4 — ASSIST Insights Proof of Concept
+
+The proof of concept for the full ISSUP dashboard brief (tiered access,
+universal filtering, Scientific Explorer). One dataset, one dashboard
+shell, with what a user sees controlled by a "Viewing as" tier switcher
+rather than four separate apps.
+
+**Universal filter bar** (Geography, Time, Demographics, Screening
+Characteristics, Substance, Risk Level) applies across every page,
+computed client-side against the full in-memory dataset — appropriate
+at this size (1,800 rows), would need server-side filtering at real
+production scale.
+
+**Tier simulation** (no real login — this is what a POC can honestly do
+without a real auth system + database):
+
+| Tier | What's locked / shown |
+|---|---|
+| A — Public | Geography (region/country) locked out entirely; only broad, non-drillable views |
+| B — Country | Locked to one chosen country; province-level detail available for South Africa |
+| C — Region | Locked to one chosen region; compares countries within it |
+| D — Global | Full access to all data, plus map/cohort/Sankey content |
+| D+ — Scientific Explorer | Everything in D, plus Advanced Explorer (raw rows) and the Query Builder |
+
+**New in this app:**
+- **Query Builder** (Tier D+ only) — pick any two dimensions (e.g.
+  Substance × Risk Level), get a live cross-tab, export it. A real,
+  working simplified version of the brief's "Custom Query Builder."
+- **Screening Funnel** — Started → Completed, split by self-screen vs.
+  practitioner-assisted.
+- **Comparative league table** — ranks provinces/countries/regions by
+  volume, completion rate, and high-risk %, with the comparison
+  dimension adapting to the current tier.
+- **Automated Narrative Summary** — a plain-English sentence generated
+  from the live filtered stats (e.g. most-screened substance, % high
+  risk, top substance among adolescents). This is **template-based, not
+  a paid LLM call** — it's deterministic and free, which was the right
+  tradeoff for a POC; a real version could later call the Claude API to
+  generate richer, more varied summaries.
+
+**What's deliberately NOT in this POC, and why:** real login/roles,
+an approval workflow, and an audit log are all absent, because each
+needs genuine backend infrastructure (a real auth system and a
+persistent database) rather than something a stateless proof-of-concept
+app can simulate honestly. See the accompanying summary PDF for the
+full scope rationale.
 
 ## Deploy
 

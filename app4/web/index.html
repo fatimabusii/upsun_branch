@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASSIST Insights — Proof of Concept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.7.16/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.6.5/vue-router.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@36.0.1/dist/ag-grid-community.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+
+  <style>
+    :root {
+      --ink: #17171a;
+      --muted: #6b7280;
+      --accent: #4338ca;
+      --accent-soft: #eef2ff;
+      --bg: #ffffff;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 224px; height: 100%;
+      border-right: 1px solid var(--border); background: #fff; padding: 24px 0; overflow-y: auto;
+    }
+    .sidebar .brand { font-weight: 700; font-size: 14.5px; padding: 0 22px 6px; }
+    .sidebar .brand span {
+      display: block; font-weight: 400; color: var(--muted); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+    }
+    .tier-badge {
+      margin: 12px 22px 20px; padding: 5px 10px; border-radius: 6px;
+      background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700;
+      display: inline-block; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .sidebar a {
+      display: block; color: var(--muted); text-decoration: none; font-size: 13.5px; font-weight: 500;
+      padding: 9px 22px; border-left: 3px solid transparent;
+    }
+    .sidebar a.router-link-exact-active { color: var(--ink); border-left-color: var(--accent); background: var(--accent-soft); }
+    .sidebar a:hover { color: var(--ink); }
+
+    .main { margin-left: 224px; }
+    .topbar {
+      border-bottom: 1px solid var(--border); padding: 14px 32px; position: sticky; top: 0; background: #fff; z-index: 5;
+    }
+    .topbar-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .topbar label { font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; margin-right: 6px; }
+    .topbar select, .topbar input[type="date"] {
+      font-family: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff;
+    }
+    .topbar select:disabled { background: #f7f7f8; color: var(--muted); }
+    .toggle-filters {
+      background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px;
+      font-size: 12.5px; font-weight: 600; cursor: pointer; margin-left: auto;
+    }
+    .toggle-filters:hover { border-color: var(--accent); color: var(--accent); }
+
+    .filterbar {
+      margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 16px;
+    }
+    .filterbar .field { display: flex; flex-direction: column; gap: 4px; }
+    .filterbar .field label { margin: 0; }
+    .filterbar select, .filterbar input { font-family: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
+      cursor: pointer; background: #fff; color: var(--muted);
+    }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .clear-filters { font-size: 12px; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+
+    .content { padding: 28px 32px 60px; max-width: 1180px; }
+    .content h1 { font-size: 21px; margin: 0 0 4px; font-weight: 700; }
+    .content .subtitle { color: var(--muted); font-size: 13.5px; margin: 0 0 20px; }
+    .scope-note { background: var(--accent-soft); color: var(--accent); font-size: 12.5px; padding: 8px 12px; border-radius: 6px; margin-bottom: 18px; }
+
+    .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 22px; }
+    .tile { border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; }
+    .tile:last-child { grid-column: 1 / -1; }
+    @media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } }
+    .tile .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+    .tile .value { font-size: 24px; font-weight: 700; }
+
+    .card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .card-header h2 { margin: 0; font-size: 14px; font-weight: 600; }
+    .card-note { color: var(--muted); font-size: 12px; margin: -6px 0 14px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .chart-wrap { position: relative; height: 270px; }
+    .chart-wrap.tall { height: 340px; }
+    .chart-wrap.compact { height: 100%; overflow: hidden; }
+    .grid-wrap { height: 460px; width: 100%; }
+    .map-wrap { height: 400px; width: 100%; border-radius: 6px; overflow: hidden; }
+    .sankey-wrap { width: 100%; overflow-x: auto; }
+
+    .export-bar { display: flex; gap: 8px; }
+    .export-bar button {
+      background: #fff; color: var(--ink); border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .export-bar button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    table.plain { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.plain th, table.plain td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+    table.plain th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600; background: #fef2f2; color: #b91c1c; }
+
+    .funnel { display: flex; flex-direction: column; gap: 14px; }
+    .funnel-row { display: grid; grid-template-columns: 160px 1fr 140px; align-items: center; gap: 12px; }
+    .funnel-label { font-size: 13px; font-weight: 600; }
+    .funnel-track { background: #f4f4f6; border-radius: 6px; height: 22px; overflow: hidden; }
+    .funnel-bar { background: var(--accent); height: 100%; border-radius: 6px; transition: width 0.3s ease; }
+    .funnel-value { font-size: 12.5px; color: var(--muted); text-align: right; }
+
+    .narrative {
+      background: var(--accent-soft); border-radius: 8px; padding: 18px 20px; font-size: 14px; line-height: 1.6; color: var(--ink);
+    }
+
+    .loading { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <nav class="sidebar">
+      <div class="brand">ASSIST Insights<span>Proof of Concept</span></div>
+      <div class="tier-badge">{{ tierLabel }}</div>
+      <router-link to="/">Overview</router-link>
+      <router-link v-if="showGeography" to="/map">Global Map</router-link>
+      <router-link to="/demographics">Demographics</router-link>
+      <router-link to="/substances">Substances</router-link>
+      <router-link to="/risk">Risk Profiles</router-link>
+      <router-link v-if="showTrends" to="/trends">Trends</router-link>
+      <router-link v-if="showComparative" to="/comparative">Comparative Analytics</router-link>
+      <router-link v-if="showFunnel" to="/funnel">Screening Funnel</router-link>
+      <router-link v-if="showCohorts" to="/cohorts">Cohort Analytics</router-link>
+      <router-link v-if="showReports" to="/reports">Reports</router-link>
+      <router-link v-if="showExplorer" to="/explorer">Advanced Explorer</router-link>
+      <router-link v-if="showQueryBuilder" to="/query-builder">Scientific Explorer</router-link>
+    </nav>
+
+    <div class="main">
+      <div class="topbar" v-if="!store.loading">
+        <div class="topbar-row">
+          <div>
+            <label>Viewing as</label>
+            <select v-model="store.tier" @change="onTierChange">
+              <option value="public">Tier A — Public</option>
+              <option value="country">Tier B — Country</option>
+              <option value="region">Tier C — Region</option>
+              <option value="global">Tier D — Global</option>
+              <option value="explorer">Tier D+ — Scientific Explorer</option>
+            </select>
+          </div>
+          <div v-if="store.tier === 'country'">
+            <label>Country</label>
+            <select v-model="store.scopeCountry" @change="onTierChange">
+              <option v-for="c in allCountries" :key="c">{{ c }}</option>
+            </select>
+          </div>
+          <div v-if="store.tier === 'region'">
+            <label>Region</label>
+            <select v-model="store.scopeRegion" @change="onTierChange">
+              <option v-for="r in store.meta.regions" :key="r">{{ r }}</option>
+            </select>
+          </div>
+          <button class="toggle-filters" @click="filtersOpen = !filtersOpen">
+            {{ filtersOpen ? 'Hide filters' : 'Show filters' }}
+          </button>
+        </div>
+
+        <div class="filterbar" v-if="filtersOpen">
+          <div class="field">
+            <label>Region</label>
+            <select v-model="store.filters.region" :disabled="store.tier === 'country' || store.tier === 'region' || store.tier === 'public'">
+              <option value="">All regions</option>
+              <option v-for="r in store.meta.regions" :key="r">{{ r }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Country</label>
+            <select v-model="store.filters.country" :disabled="store.tier === 'country' || store.tier === 'public'">
+              <option value="">All countries</option>
+              <option v-for="c in countryOptions" :key="c">{{ c }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Province</label>
+            <select v-model="store.filters.province" :disabled="store.tier === 'public' || store.filters.country !== 'South Africa'">
+              <option value="">All provinces</option>
+              <option v-for="p in provinceOptions" :key="p">{{ p }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Quarter</label>
+            <select v-model="store.filters.quarter">
+              <option value="">All quarters</option>
+              <option v-for="q in ['Q1','Q2','Q3','Q4']" :key="q">{{ q }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Month</label>
+            <select v-model="store.filters.month">
+              <option value="">All months</option>
+              <option v-for="m in store.meta.monthNames" :key="m">{{ m }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Custom range</label>
+            <div style="display:flex; gap:6px;">
+              <input type="date" v-model="store.filters.dateFrom" :min="store.meta.dateMin" :max="store.meta.dateMax" />
+              <input type="date" v-model="store.filters.dateTo" :min="store.meta.dateMin" :max="store.meta.dateMax" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Age Group</label>
+            <select v-model="store.filters.ageGroup">
+              <option value="">All ages</option>
+              <option v-for="a in store.meta.ageGroups" :key="a">{{ a }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Gender</label>
+            <select v-model="store.filters.gender">
+              <option value="">All genders</option>
+              <option v-for="g in store.meta.genders" :key="g">{{ g }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Screening Mode</label>
+            <select v-model="store.filters.screeningMode">
+              <option value="">Self-screen + Practitioner</option>
+              <option v-for="m in store.meta.screeningModes" :key="m">{{ m }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Version</label>
+            <select v-model="store.filters.screeningVersion">
+              <option value="">Adult + Adolescent</option>
+              <option v-for="v in store.meta.screeningVersions" :key="v">{{ v }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Risk Level</label>
+            <select v-model="store.filters.riskLevel">
+              <option value="">All risk levels</option>
+              <option v-for="r in store.meta.riskLevels" :key="r">{{ r }}</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column: span 2;">
+            <label>Substance (click to toggle)</label>
+            <div class="chip-row">
+              <span
+                v-for="s in store.meta.substances" :key="s"
+                class="chip" :class="{ active: store.filters.substances.includes(s) }"
+                @click="toggleSubstance(s)">{{ s }}</span>
+            </div>
+          </div>
+          <div class="field" style="justify-content: flex-end;">
+            <button class="clear-filters" @click="clearFilters">Clear all filters</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <p v-if="store.loading" class="loading">Loading dataset…</p>
+        <router-view v-else></router-view>
+      </div>
+    </div>
+  </div>
+
+  <script src="./store.js"></script>
+  <script src="./charts.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

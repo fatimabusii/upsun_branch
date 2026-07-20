@@ -59,6 +59,26 @@ applications:
           allow: false
           passthru: true
 
+  app4:
+    type: 'golang:1.22'
+    source:
+      root: 'app4'
+
+    hooks:
+      build: |
+        go build -o bin/app .
+
+    web:
+      upstream:
+        socket_family: tcp
+        protocol: http
+      commands:
+        start: ./bin/app
+      locations:
+        '/':
+          allow: false
+          passthru: true
+
 routes:
   "https://{default}/":
     type: upstream
@@ -71,3 +91,7 @@ routes:
   "https://app3.{default}/":
     type: upstream
     upstream: "app3:http"
+
+  "https://app4.{default}/":
+    type: upstream
+    upstream: "app4:http"
