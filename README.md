@@ -75,6 +75,26 @@ cd app1 && go run .   # http://localhost:8888
 cd app2 && go run .   # http://localhost:8888
 ```
 
+## Exporting data
+
+Every page has a **CSV / Excel / PDF** export bar next to each chart or
+table title. All three formats are generated fully client-side, using
+only free/open-source libraries — no paid ag-Grid Enterprise license
+needed:
+
+- **CSV & Excel** — [SheetJS](https://sheetjs.com) (Apache-2.0, free).
+  Both formats are built from the same in-memory worksheet, so one code
+  path covers both.
+- **PDF** — [jsPDF](https://github.com/parzibyte/jsPDF) + AutoTable
+  (MIT, free), rendered as a simple title + data table.
+- Large exports (Advanced Explorer's 1,400 rows) are capped at 200 rows
+  for the PDF specifically, to keep client-side generation fast — CSV
+  and Excel always export the full dataset.
+
+Note: ag-Grid Community's own Excel export is an **Enterprise-only**
+feature requiring a paid license, so it's deliberately not used here —
+SheetJS gives the same result for free.
+
 ## Deploy
 
 Push to the branch connected to your GitHub integration as usual:

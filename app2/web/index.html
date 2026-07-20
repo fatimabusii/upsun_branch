@@ -10,6 +10,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.6.5/vue-router.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@36.0.1/dist/ag-grid-community.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --plum: #2b1f36;
@@ -137,14 +140,20 @@
     /* Tinted KPI tiles */
     .tiles {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
       margin-bottom: 28px;
     }
     .tile {
       border-radius: 16px;
-      padding: 20px 22px;
+      padding: 22px 24px;
       box-shadow: 0 4px 14px rgba(43, 31, 54, 0.06);
+    }
+    .tile:last-child {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 640px) {
+      .tiles { grid-template-columns: 1fr; }
     }
     .tile:nth-child(1) { background: #fff0ee; }
     .tile:nth-child(2) { background: #eaf7f1; }
@@ -162,6 +171,36 @@
       font-weight: 700;
       color: var(--plum);
       font-family: 'Poppins', sans-serif;
+    }
+
+    /* Export buttons */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card-header h2 { margin: 0; }
+    .export-bar {
+      display: flex;
+      gap: 8px;
+    }
+    .export-bar button {
+      background: #f7f1ea;
+      color: var(--plum);
+      border: 1px solid #eee3d8;
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .export-bar button:hover {
+      background: var(--coral);
+      color: #fff;
+      border-color: var(--coral);
     }
 
     .card {

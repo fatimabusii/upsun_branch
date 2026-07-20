@@ -123,6 +123,100 @@ Vue.component('chart-widget', {
   },
 });
 
+// Generic export button row: CSV / Excel / PDF, from any endpoint shape.
+// shape: 'rows' (already an array of objects), 'series' ({labels,values}),
+// or 'multiSeries' ({labels, series:[{name,values}]}).
+Vue.component('export-bar', {
+  props: {
+    endpoint: { type: String, required: true },
+    path: { type: String, default: '' },
+    shape: { type: String, default: 'rows' },
+    filename: { type: String, default: 'export' },
+    labelKey: { type: String, default: 'Category' },
+    valueKey: { type: String, default: 'Value' },
+  },
+  template: `
+    <div class="export-bar">
+      <button @click="exportAs('csv')" title="Download CSV">CSV</button>
+      <button @click="exportAs('xlsx')" title="Download Excel">Excel</button>
+      <button @click="exportAs('pdf')" title="Download PDF">PDF</button>
+    </div>
+  `,
+  methods: {
+    async fetchRows() {
+      const res = await fetch(this.endpoint);
+      const json = await res.json();
+      const data = this.path ? resolvePath(json, this.path) : json;
+
+      if (this.shape === 'object') return [data];
+      if (this.shape === 'rows') return data;
+
+      if (this.shape === 'series') {
+        return data.labels.map((l, i) => ({
+          [this.labelKey]: l,
+          [this.valueKey]: data.values[i],
+        }));
+      }
+
+      if (this.shape === 'multiSeries') {
+        return data.labels.map((l, i) => {
+          const row = { [this.labelKey]: l };
+          data.series.forEach((s) => {
+            row[s.name] = s.values[i];
+          });
+          return row;
+        });
+      }
+
+      return [];
+    },
+    download(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    },
+    async exportAs(kind) {
+      const rows = await this.fetchRows();
+      if (!rows || !rows.length) return;
+
+      if (kind === 'csv') {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        this.download(new Blob([csv], { type: 'text/csv' }), this.filename + '.csv');
+        return;
+      }
+
+      if (kind === 'xlsx') {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Data');
+        XLSX.writeFile(wb, this.filename + '.xlsx');
+        return;
+      }
+
+      if (kind === 'pdf') {
+        // Cap very large exports so PDF generation stays fast client-side.
+        const pdfRows = rows.length > 200 ? rows.slice(0, 200) : rows;
+        const cols = Object.keys(pdfRows[0]);
+        const body = pdfRows.map((r) => cols.map((c) => String(r[c])));
+        const doc = new jspdf.jsPDF();
+        doc.setFontSize(13);
+        doc.text(this.filename.replace(/-/g, ' '), 14, 16);
+        if (rows.length > 200) {
+          doc.setFontSize(9);
+          doc.text('(first 200 of ' + rows.length + ' rows)', 14, 22);
+        }
+        doc.autoTable({ head: [cols], body, startY: rows.length > 200 ? 26 : 22, styles: { fontSize: 8 } });
+        doc.save(this.filename + '.pdf');
+      }
+    },
+  },
+});
 // Generic ag-Grid-backed widget. Usage:
 // <grid-widget endpoint="/api/reports" :column-defs="cols"></grid-widget>
 Vue.component('grid-widget', {
