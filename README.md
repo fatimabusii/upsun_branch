@@ -1,67 +1,79 @@
-# Multi-App Dashboard
+# Screening Insights Dashboard
 
-Two independent Go + Vue 2 dashboards deployed from a single Upsun project,
-each on its own subdomain.
+Two design directions for the same substance-use screening dashboard,
+built on the same Go + Vue 2 stack, sharing one backend data shape so the
+client can compare them side by side on identical numbers.
 
 ## Layout
 
 ```
 .
-├── .upsun/config.yaml   # defines BOTH apps + routing, lives at repo root
-├── app1/                # original dashboard: top nav bar
+├── .upsun/config.yaml   # defines BOTH apps + subdomain routing
+├── app1/                # "Clinical Navy" design — top nav
 │   ├── go.mod
 │   ├── main.go
-│   └── web/index.html
-└── app2/                # "Part 2": hamburger button + slide-out left menu
+│   ├── data.go          # synthetic dataset + /api/* endpoints
+│   └── web/
+│       ├── index.html
+│       ├── charts.js    # Chart.js + ag-Grid Vue components (navy/teal palette)
+│       └── app.js        # pages + router
+└── app2/                # "Warm Editorial" design — hamburger + slide-out sidebar
     ├── go.mod
     ├── main.go
-    └── web/index.html
+    ├── data.go          # identical dataset/API as app1
+    └── web/
+        ├── index.html
+        ├── charts.js    # same components, coral/plum/teal palette
+        └── app.js
 ```
 
-Each app is a self-contained Go static file server (no shared code), so
-`app1` and `app2` can be built, changed, and deployed independently even
-though they live in one repo and one Upsun project.
+## The data
 
-## Routing
+`data.go` (identical in both apps) generates **1,400 synthetic screening
+records** shaped exactly like the client's real schema: pathway,
+assessment type, country/province, age group, gender, substance, risk
+level, completion status, and time taken. It's seeded (deterministic), so
+both apps always show the same numbers.
 
-- `https://{default}/` → `app1` (your original site, top nav bar)
-- `https://app2.{default}/` → `app2` (new site, hamburger + slide-out menu)
+Once the client has a preferred design, swap `data.go`'s
+`generateRecords()` for a real database query (e.g. via `database/sql`
+and the actual `assessment_detail` / `involvement_summary` tables) —
+none of the frontend code needs to change, since it just calls the same
+`/api/*` endpoints.
 
-`{default}` is whatever domain Upsun assigns your project (or your custom
-domain, if you add one later). No extra DNS setup is needed for the
-`app2.` subdomain — Upsun's routing handles it automatically under its
-own domain.
+### API endpoints (shared by both apps)
 
-## Run either app locally
+| Endpoint | Powers |
+|---|---|
+| `/api/summary` | Landing page KPI tiles |
+| `/api/geography` | Geography page (province + country) |
+| `/api/demographics` | Demographics page (age group, gender) |
+| `/api/substances` | Substances page (volume + % high-risk) |
+| `/api/risk` | Risk Profiles page (overall + by substance) |
+| `/api/trends` | Trends page (monthly volume vs completions) |
+| `/api/comparative` | Comparative Analytics (risk by pathway) |
+| `/api/reports` | Reports page — monthly summary table (ag-Grid) |
+| `/api/explorer` | Advanced Explorer — full row-level data (ag-Grid) |
+
+## The two designs
+
+- **App1 — Clinical Navy:** navy/teal palette, top navigation, white
+  cards with a teal accent border. Corporate, clinical, minimal.
+- **App2 — Warm Editorial:** cream background, coral/plum/teal palette,
+  hamburger + slide-out sidebar, rounded tinted KPI tiles, Poppins
+  headings. Softer, more editorial feel.
+
+Both use the same charting approach: **Chart.js** (bar, line, doughnut,
+stacked bar) and **ag-Grid Community** for the two data-table pages —
+both loaded from CDN, both fully free, no build step required.
+
+## Run locally
 
 ```bash
-cd app1 && go run main.go   # http://localhost:8888
+cd app1 && go run .   # http://localhost:8888
 # or
-cd app2 && go run main.go   # http://localhost:8888
+cd app2 && go run .   # http://localhost:8888
 ```
-
-(Run one at a time locally unless you change the port for one of them.)
-
-## Data Grid page
-
-Both apps now have a "Data Grid" page (`/grid`) built with
-[ag-Grid Community](https://www.ag-grid.com/) (free, MIT licensed):
-
-- Loaded straight from CDN (`ag-grid-community@36.0.1`), no npm/build step,
-  same as the rest of the stack.
-- The grid is created via ag-Grid's plain-JS `agGrid.createGrid(...)` API
-  inside a small Vue component (`mounted`/`beforeDestroy` hooks), so no
-  Vue-specific ag-Grid package is needed — that keeps it Vue 2 compatible
-  with zero extra dependencies.
-- Each Go app exposes a `/api/data` JSON endpoint; the grid fetches from
-  it on page load. app1 serves sample employee data, app2 serves sample
-  product/sales data — just to show two different datasets.
-- Sorting, filtering, and column resizing are enabled by default
-  (`defaultColDef`), all included in the free Community edition.
-
-To point the grid at real data later, just change what `/api/data`
-returns in `main.go` — the frontend doesn't need to change at all as
-long as the field names in `columnDefs` still match.
 
 ## Deploy
 

@@ -3,137 +3,198 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Part 2</title>
+  <title>Screening Insights — Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.7.16/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.6.5/vue-router.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@36.0.1/dist/ag-grid-community.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --plum: #2b1f36;
+      --coral: #ff6b5f;
+      --teal: #3fae87;
+      --amber: #f5a623;
+      --cream: #fdfaf6;
+      --card: #ffffff;
+      --text: #2b2320;
+      --muted: #8a7f78;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #f5f6f8;
-      color: #1f2430;
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--cream);
+      color: var(--text);
     }
+    h1, h2, .brand { font-family: 'Poppins', sans-serif; }
 
-    /* Top bar with hamburger button */
+    /* Top bar with hamburger */
     .topbar {
       display: flex;
       align-items: center;
-      background: #1f2430;
-      padding: 0 16px;
-      height: 56px;
+      background: var(--cream);
+      border-bottom: 1px solid #eee3d8;
+      padding: 0 20px;
+      height: 64px;
     }
     .hamburger {
-      background: none;
+      background: var(--plum);
       border: none;
+      border-radius: 10px;
       cursor: pointer;
-      padding: 8px;
+      width: 40px;
+      height: 40px;
       margin-right: 16px;
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
       gap: 4px;
     }
     .hamburger span {
       display: block;
-      width: 24px;
+      width: 18px;
       height: 2px;
       background: #fff;
+      border-radius: 2px;
     }
     .topbar .brand {
-      color: #fff;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 18px;
+      color: var(--plum);
     }
 
-    /* Overlay behind the sidebar */
     .overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(43, 31, 54, 0.4);
       z-index: 10;
     }
 
-    /* Sliding sidebar */
     .sidebar {
       position: fixed;
       top: 0;
       left: 0;
       height: 100%;
-      width: 240px;
-      background: #1f2430;
+      width: 260px;
+      background: var(--plum);
       z-index: 20;
       transform: translateX(-100%);
-      transition: transform 0.25s ease;
+      transition: transform 0.28s ease;
       display: flex;
       flex-direction: column;
-      padding-top: 16px;
+      padding-top: 20px;
     }
-    .sidebar.open {
-      transform: translateX(0);
-    }
+    .sidebar.open { transform: translateX(0); }
     .sidebar-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 20px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 0 22px 18px;
       margin-bottom: 8px;
     }
-    .sidebar-header .brand {
-      color: #fff;
-      font-weight: 600;
-      font-size: 16px;
-    }
+    .sidebar-header .brand { color: #fff; font-size: 16px; }
     .sidebar-close {
-      background: none;
-      border: none;
-      color: #c7cbd4;
-      font-size: 20px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 4px;
+      background: none; border: none; color: #cbb9d6;
+      font-size: 20px; cursor: pointer; padding: 4px;
     }
     .sidebar a {
-      color: #c7cbd4;
+      color: #cbb9d6;
       text-decoration: none;
-      padding: 12px 20px;
+      padding: 11px 22px;
       font-size: 14px;
+      margin: 2px 10px;
+      border-radius: 8px;
+      font-weight: 500;
     }
     .sidebar a.router-link-exact-active {
       color: #fff;
-      background: rgba(255,255,255,0.06);
-      border-left: 3px solid #4f8cff;
-      padding-left: 17px;
+      background: rgba(255,255,255,0.08);
     }
-    .sidebar a:hover {
-      color: #fff;
+    .sidebar a:hover { color: #fff; }
+
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+    .fade-enter, .fade-leave-to { opacity: 0; }
+
+    .page {
+      max-width: 1180px;
+      margin: 28px auto;
+      padding: 0 24px 48px;
+    }
+    .page h1 {
+      font-size: 25px;
+      margin: 0 0 4px;
+      color: var(--plum);
+    }
+    .page .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 24px;
     }
 
-    /* Slide transition helper classes (Vue <transition>) */
-    .fade-enter-active, .fade-leave-active {
-      transition: opacity 0.25s ease;
+    /* Tinted KPI tiles */
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
     }
-    .fade-enter, .fade-leave-to {
-      opacity: 0;
+    .tile {
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 4px 14px rgba(43, 31, 54, 0.06);
+    }
+    .tile:nth-child(1) { background: #fff0ee; }
+    .tile:nth-child(2) { background: #eaf7f1; }
+    .tile:nth-child(3) { background: #fff4e2; }
+    .tile:nth-child(4) { background: #f1ecf7; }
+    .tile:nth-child(5) { background: #ffffff; border: 1px solid #eee3d8; }
+    .tile .label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .tile .value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--plum);
+      font-family: 'Poppins', sans-serif;
     }
 
-    .content {
-      max-width: 900px;
-      margin: 48px auto;
-      padding: 0 24px;
-    }
     .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 48px;
-      text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 14px rgba(43, 31, 54, 0.06);
+      margin-bottom: 20px;
+      border: 1px solid #f2ece3;
     }
-    .card h1 {
-      margin: 0;
-      font-size: 32px;
+    .card h2 {
+      font-size: 15px;
+      color: var(--plum);
+      margin: 0 0 16px;
+      font-weight: 600;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap.tall { height: 360px; }
+    .grid-wrap { height: 480px; width: 100%; }
+
+    .loading {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px 0;
+      text-align: center;
     }
   </style>
 </head>
@@ -141,11 +202,9 @@
   <div id="app">
     <div class="topbar">
       <button class="hamburger" @click="menuOpen = true" aria-label="Open menu">
-        <span></span>
-        <span></span>
-        <span></span>
+        <span></span><span></span><span></span>
       </button>
-      <span class="brand">My Dashboard — Part 2</span>
+      <span class="brand">Screening Insights — Studio</span>
     </div>
 
     <transition name="fade">
@@ -157,95 +216,24 @@
         <span class="brand">Menu</span>
         <button class="sidebar-close" @click="menuOpen = false" aria-label="Close menu">&times;</button>
       </div>
-      <router-link to="/" @click.native="menuOpen = false">Home</router-link>
+      <router-link to="/" @click.native="menuOpen = false">Landing</router-link>
       <router-link to="/overview" @click.native="menuOpen = false">Overview</router-link>
-      <router-link to="/page1" @click.native="menuOpen = false">Page 1</router-link>
-      <router-link to="/page2" @click.native="menuOpen = false">Page 2</router-link>
-      <router-link to="/page3" @click.native="menuOpen = false">Page 3</router-link>
-      <router-link to="/page4" @click.native="menuOpen = false">Page 4</router-link>
-      <router-link to="/page5" @click.native="menuOpen = false">Page 5</router-link>
-      <router-link to="/grid" @click.native="menuOpen = false">Data Grid</router-link>
+      <router-link to="/geography" @click.native="menuOpen = false">Geography</router-link>
+      <router-link to="/demographics" @click.native="menuOpen = false">Demographics</router-link>
+      <router-link to="/substances" @click.native="menuOpen = false">Substances</router-link>
+      <router-link to="/risk" @click.native="menuOpen = false">Risk Profiles</router-link>
+      <router-link to="/trends" @click.native="menuOpen = false">Trends</router-link>
+      <router-link to="/comparative" @click.native="menuOpen = false">Comparative Analytics</router-link>
+      <router-link to="/reports" @click.native="menuOpen = false">Reports</router-link>
+      <router-link to="/explorer" @click.native="menuOpen = false">Advanced Explorer</router-link>
     </nav>
 
-    <div class="content">
-      <div class="card">
-        <router-view></router-view>
-      </div>
+    <div class="page">
+      <router-view></router-view>
     </div>
   </div>
 
-  <script>
-    const makePage = (text) => ({
-      template: `<h1>${text}</h1>`
-    });
-
-    const Home = makePage("Welcome Part 2!");
-    const Overview = makePage("This is the Overview Part 2!");
-    const Page1 = makePage("This is Page 1 Part 2!");
-    const Page2 = makePage("This is Page 2 Part 2!");
-    const Page3 = makePage("This is Page 3 Part 2!");
-    const Page4 = makePage("This is Page 4 Part 2!");
-    const Page5 = makePage("This is Page 5 Part 2!");
-
-    const DataGridPage = {
-      template: `
-        <div style="text-align: left;">
-          <h1 style="margin-top: 0; text-align: center;">Data Grid Part 2</h1>
-          <div ref="grid" style="height: 400px; width: 100%;"></div>
-        </div>
-      `,
-      data() {
-        return { gridApi: null };
-      },
-      mounted() {
-        fetch('/api/data')
-          .then((res) => res.json())
-          .then((rows) => {
-            this.gridApi = agGrid.createGrid(this.$refs.grid, {
-              columnDefs: [
-                { field: 'id', headerName: 'ID', width: 80 },
-                { field: 'product', headerName: 'Product', flex: 1 },
-                { field: 'category', headerName: 'Category', flex: 1 },
-                { field: 'units', headerName: 'Units Sold', flex: 1 },
-                {
-                  field: 'revenue',
-                  headerName: 'Revenue',
-                  flex: 1,
-                  valueFormatter: (p) => '$' + p.value.toLocaleString(),
-                },
-              ],
-              defaultColDef: { sortable: true, filter: true, resizable: true },
-              rowData: rows,
-            });
-          });
-      },
-      beforeDestroy() {
-        if (this.gridApi) {
-          this.gridApi.destroy();
-        }
-      },
-    };
-
-    const router = new VueRouter({
-      mode: 'hash',
-      routes: [
-        { path: '/', component: Home },
-        { path: '/overview', component: Overview },
-        { path: '/page1', component: Page1 },
-        { path: '/page2', component: Page2 },
-        { path: '/page3', component: Page3 },
-        { path: '/page4', component: Page4 },
-        { path: '/page5', component: Page5 },
-        { path: '/grid', component: DataGridPage },
-      ]
-    });
-
-    new Vue({
-      router,
-      data: {
-        menuOpen: false
-      }
-    }).$mount('#app');
-  </script>
+  <script src="./charts.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
