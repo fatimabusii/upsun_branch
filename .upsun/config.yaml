@@ -1,6 +1,28 @@
 applications:
-  dashboard:
+  app1:
     type: 'golang:1.22'
+    source:
+      root: 'app1'
+
+    hooks:
+      build: |
+        go build -o bin/app .
+
+    web:
+      upstream:
+        socket_family: tcp
+        protocol: http
+      commands:
+        start: ./bin/app
+      locations:
+        '/':
+          allow: false
+          passthru: true
+
+  app2:
+    type: 'golang:1.22'
+    source:
+      root: 'app2'
 
     hooks:
       build: |
@@ -20,4 +42,8 @@ applications:
 routes:
   "https://{default}/":
     type: upstream
-    upstream: "dashboard:http"
+    upstream: "app1:http"
+
+  "https://app2.{default}/":
+    type: upstream
+    upstream: "app2:http"

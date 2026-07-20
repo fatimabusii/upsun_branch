@@ -1,46 +1,55 @@
-# Simple Dashboard
+# Multi-App Dashboard
 
-A minimal Go + Vue 2 dashboard: a landing page, a top nav bar, an Overview
-page, and Page 1 through Page 5. No build step, no database, no npm —
-Vue 2 and Vue Router are loaded from a CDN in `web/index.html`, and a tiny
-Go server just serves that static file.
+Two independent Go + Vue 2 dashboards deployed from a single Upsun project,
+each on its own subdomain.
 
-## Project layout
+## Layout
 
 ```
 .
-├── .upsun/config.yaml   # Upsun deployment config
-├── go.mod
-├── main.go              # static file server
-└── web/
-    └── index.html       # Vue 2 app: nav bar + pages
+├── .upsun/config.yaml   # defines BOTH apps + routing, lives at repo root
+├── app1/                # original dashboard: top nav bar
+│   ├── go.mod
+│   ├── main.go
+│   └── web/index.html
+└── app2/                # "Part 2": hamburger button + slide-out left menu
+    ├── go.mod
+    ├── main.go
+    └── web/index.html
 ```
 
-## Run locally
+Each app is a self-contained Go static file server (no shared code), so
+`app1` and `app2` can be built, changed, and deployed independently even
+though they live in one repo and one Upsun project.
+
+## Routing
+
+- `https://{default}/` → `app1` (your original site, top nav bar)
+- `https://app2.{default}/` → `app2` (new site, hamburger + slide-out menu)
+
+`{default}` is whatever domain Upsun assigns your project (or your custom
+domain, if you add one later). No extra DNS setup is needed for the
+`app2.` subdomain — Upsun's routing handles it automatically under its
+own domain.
+
+## Run either app locally
 
 ```bash
-go run main.go
+cd app1 && go run main.go   # http://localhost:8888
+# or
+cd app2 && go run main.go   # http://localhost:8888
 ```
 
-Then open http://localhost:8888
+(Run one at a time locally unless you change the port for one of them.)
 
-## Deploy to Upsun
+## Deploy
 
-1. Create a new Upsun project (the free plan is enough for this app).
-2. From this directory:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial dashboard"
-   upsun project:set-remote <PROJECT_ID>
-   upsun push
-   ```
-3. Once the push finishes, open the URL Upsun gives you.
+Push to the branch connected to your GitHub integration as usual:
 
-## Adding a real page later
+```bash
+git add .
+git commit -m "Add app2 with slide-out menu, restructure into multi-app layout"
+git push
+```
 
-Each page is currently a one-line Vue component defined in
-`web/index.html` (see the `makePage` helper and the `routes` array).
-To add real content, replace a page's template string, or split pages
-into separate `.vue`-style components once you outgrow the single-file
-setup.
+Upsun will build and deploy both apps from the one `.upsun/config.yaml`.
