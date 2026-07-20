@@ -39,6 +39,26 @@ applications:
           allow: false
           passthru: true
 
+  app3:
+    type: 'golang:1.22'
+    source:
+      root: 'app3'
+
+    hooks:
+      build: |
+        go build -o bin/app .
+
+    web:
+      upstream:
+        socket_family: tcp
+        protocol: http
+      commands:
+        start: ./bin/app
+      locations:
+        '/':
+          allow: false
+          passthru: true
+
 routes:
   "https://{default}/":
     type: upstream
@@ -47,3 +67,7 @@ routes:
   "https://app2.{default}/":
     type: upstream
     upstream: "app2:http"
+
+  "https://app3.{default}/":
+    type: upstream
+    upstream: "app3:http"

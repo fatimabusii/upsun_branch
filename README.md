@@ -95,6 +95,53 @@ Note: ag-Grid Community's own Excel export is an **Enterprise-only**
 feature requiring a paid license, so it's deliberately not used here —
 SheetJS gives the same result for free.
 
+## App3 — Global Strategic Dashboard
+
+A third design, built specifically against the client's "Global Strategic
+Dashboard" brief (highest-level oversight for ISSUP leadership, funders,
+research partners, technical collaborators). Visual style: **Minimal
+Mono** — white background, single indigo accent, IBM Plex Sans, borders
+instead of shadows, persistent left-rail navigation (a third distinct nav
+pattern, alongside app1's top nav and app2's slide-out sidebar).
+
+New capabilities specific to this brief:
+
+| Page | What it covers |
+|---|---|
+| Overview | KPI tiles incl. **Active Practitioners** (platform adoption), plus an adoption-over-time chart and overall risk distribution |
+| Global Map | A Leaflet bubble map — screening density by South African province and by country (approximate centroids, illustrative) |
+| Substance Trends | Monthly screening volume **per substance** over the year (multi-line, click legend to isolate a substance) |
+| Demographics | Age group + gender, same as app1/app2 |
+| Cohort Analytics | Adolescents / Adults / Older Adults rollup, risk-by-cohort, and a **Sankey diagram** (Screening → Risk Level → Suggested Intervention) |
+| Regional Concerns | Provinces flagged for an 8+ percentage-point month-over-month jump in high-risk share — a simple, transparent anomaly heuristic |
+| Reports / Advanced Explorer | Same as app1/app2, extended with cohort, intervention, and practitioner fields |
+
+**New libraries used (all free/open-source, CDN-loaded, no build step):**
+- **Leaflet** (BSD-2-Clause) for the map.
+- **D3 + d3-sankey** (ISC/BSD) for the Sankey diagram.
+
+**Known simplifications, worth flagging to the client:**
+- The dataset's youngest bracket is 12-17, so there's no true "Children"
+  (under-12) cohort — mapped to Adolescents / Adults / Older Adults instead.
+- Map coordinates are approximate province/country centroids, not precise
+  GIS boundaries — fine for a density overview, not for spatial analysis.
+- Regional Concerns flags are a simple month-over-month threshold on
+  synthetic (random) data — real signal will only emerge once this runs
+  against actual data; the mechanism itself is real and reusable.
+- "Suggested Intervention" is currently a direct 1:1 mapping from risk
+  level (Low → Brief Advice, Moderate → Brief Intervention, High →
+  Referral to Treatment), matching the real ASSIST tool's bands — swap
+  this for the real intervention field once connected to actual data.
+
+## A note on resources
+
+Each app gets its own small container (0.5 CPU / 224MB by default going by
+your earlier deploy logs). Three apps in one project uses 3x that. If
+your Upsun plan has a resource ceiling, this may be worth checking before
+deploying — Upsun will tell you plainly in the build log if a plan limit
+is hit, and the fix is just requesting more resources or upgrading plan
+tier, not a code change.
+
 ## Deploy
 
 Push to the branch connected to your GitHub integration as usual:
