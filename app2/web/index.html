@@ -6,6 +6,7 @@
   <title>Dashboard Part 2</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.7.16/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.6.5/vue-router.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@36.0.1/dist/ag-grid-community.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -163,6 +164,7 @@
       <router-link to="/page3" @click.native="menuOpen = false">Page 3</router-link>
       <router-link to="/page4" @click.native="menuOpen = false">Page 4</router-link>
       <router-link to="/page5" @click.native="menuOpen = false">Page 5</router-link>
+      <router-link to="/grid" @click.native="menuOpen = false">Data Grid</router-link>
     </nav>
 
     <div class="content">
@@ -185,6 +187,45 @@
     const Page4 = makePage("This is Page 4 Part 2!");
     const Page5 = makePage("This is Page 5 Part 2!");
 
+    const DataGridPage = {
+      template: `
+        <div style="text-align: left;">
+          <h1 style="margin-top: 0; text-align: center;">Data Grid Part 2</h1>
+          <div ref="grid" style="height: 400px; width: 100%;"></div>
+        </div>
+      `,
+      data() {
+        return { gridApi: null };
+      },
+      mounted() {
+        fetch('/api/data')
+          .then((res) => res.json())
+          .then((rows) => {
+            this.gridApi = agGrid.createGrid(this.$refs.grid, {
+              columnDefs: [
+                { field: 'id', headerName: 'ID', width: 80 },
+                { field: 'product', headerName: 'Product', flex: 1 },
+                { field: 'category', headerName: 'Category', flex: 1 },
+                { field: 'units', headerName: 'Units Sold', flex: 1 },
+                {
+                  field: 'revenue',
+                  headerName: 'Revenue',
+                  flex: 1,
+                  valueFormatter: (p) => '$' + p.value.toLocaleString(),
+                },
+              ],
+              defaultColDef: { sortable: true, filter: true, resizable: true },
+              rowData: rows,
+            });
+          });
+      },
+      beforeDestroy() {
+        if (this.gridApi) {
+          this.gridApi.destroy();
+        }
+      },
+    };
+
     const router = new VueRouter({
       mode: 'hash',
       routes: [
@@ -195,6 +236,7 @@
         { path: '/page3', component: Page3 },
         { path: '/page4', component: Page4 },
         { path: '/page5', component: Page5 },
+        { path: '/grid', component: DataGridPage },
       ]
     });
 

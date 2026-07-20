@@ -42,6 +42,27 @@ cd app2 && go run main.go   # http://localhost:8888
 
 (Run one at a time locally unless you change the port for one of them.)
 
+## Data Grid page
+
+Both apps now have a "Data Grid" page (`/grid`) built with
+[ag-Grid Community](https://www.ag-grid.com/) (free, MIT licensed):
+
+- Loaded straight from CDN (`ag-grid-community@36.0.1`), no npm/build step,
+  same as the rest of the stack.
+- The grid is created via ag-Grid's plain-JS `agGrid.createGrid(...)` API
+  inside a small Vue component (`mounted`/`beforeDestroy` hooks), so no
+  Vue-specific ag-Grid package is needed — that keeps it Vue 2 compatible
+  with zero extra dependencies.
+- Each Go app exposes a `/api/data` JSON endpoint; the grid fetches from
+  it on page load. app1 serves sample employee data, app2 serves sample
+  product/sales data — just to show two different datasets.
+- Sorting, filtering, and column resizing are enabled by default
+  (`defaultColDef`), all included in the free Community edition.
+
+To point the grid at real data later, just change what `/api/data`
+returns in `main.go` — the frontend doesn't need to change at all as
+long as the field names in `columnDefs` still match.
+
 ## Deploy
 
 Push to the branch connected to your GitHub integration as usual:
