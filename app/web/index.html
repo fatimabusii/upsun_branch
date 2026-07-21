@@ -271,7 +271,7 @@
 
       <div class="content">
         <p v-if="store.loading" class="loading">Loading dataset…</p>
-        <router-view v-else></router-view>
+        <router-view v-else :key="store.personaId"></router-view>
       </div>
     </div>
   </div>
