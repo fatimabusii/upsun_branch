@@ -10,7 +10,7 @@ import (
 
 // AssessmentRecord mirrors the shape of the real assessment_detail /
 // involvement_summary data (simplified to one substance+risk per record,
-// which is close enough for dashboard purposes).
+// close enough for dashboard purposes).
 type AssessmentRecord struct {
 	ID         int    `json:"id"`
 	Date       string `json:"date"` // YYYY-MM-DD
