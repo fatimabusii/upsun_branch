@@ -23,15 +23,3 @@ routes:
   "https://{default}/":
     type: upstream
     upstream: "app1:http"
-
-  "https://app2.{default}/":
-    type: upstream
-    upstream: "app2:http"
-
-  "https://app3.{default}/":
-    type: upstream
-    upstream: "app3:http"
-
-  "https://app4.{default}/":
-    type: upstream
-    upstream: "app4:http"
