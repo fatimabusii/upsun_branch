@@ -12,10 +12,15 @@
 // dataset directly; this menu only changes what the UI chooses to show.
 const PERSONAS = [
   { id: 'public', label: 'Public visitor', tier: 'public' },
-  { id: 'sa_moh', label: 'South Africa — Ministry of Health', tier: 'country', scopeCountry: 'South Africa' },
-  { id: 'kenya_moh', label: 'Kenya — Ministry of Health', tier: 'country', scopeCountry: 'Kenya' },
-  { id: 'au', label: 'African Union (regional)', tier: 'region', scopeRegion: 'Africa' },
-  { id: 'oas', label: 'Organization of American States (regional)', tier: 'region', scopeRegion: 'Americas' },
+  // Tier B (Country) and Tier C (Region) personas temporarily hidden —
+  // the tier code paths work, but the visualizations don't yet fully
+  // meet the docx brief for these tiers (missing cohort views at B/C,
+  // early-warning indicators, regional benchmarking, etc.). Re-enable
+  // once those gaps are closed.
+  // { id: 'sa_moh', label: 'South Africa — Ministry of Health', tier: 'country', scopeCountry: 'South Africa' },
+  // { id: 'kenya_moh', label: 'Kenya — Ministry of Health', tier: 'country', scopeCountry: 'Kenya' },
+  // { id: 'au', label: 'African Union (regional)', tier: 'region', scopeRegion: 'Africa' },
+  // { id: 'oas', label: 'Organization of American States (regional)', tier: 'region', scopeRegion: 'Americas' },
   { id: 'issup', label: 'ISSUP Leadership (global)', tier: 'global' },
   { id: 'scientific', label: 'Scientific Explorer (approved researcher)', tier: 'explorer' },
 ];
