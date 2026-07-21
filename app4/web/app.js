@@ -669,13 +669,13 @@ new Vue({
       return true;
     },
     showTrends() {
-      return true;
+      return store.tier !== 'public';
     },
     showComparative() {
       return store.tier !== 'public';
     },
     showFunnel() {
-      return store.tier !== 'public';
+      return true;
     },
     showCohorts() {
       return store.tier === 'global' || store.tier === 'explorer';
