@@ -641,7 +641,13 @@ new Vue({
     return { store, filtersOpen: false };
   },
   computed: {
-    tierLabel() {
+    personas() {
+      return PERSONAS;
+    },
+    currentPersona() {
+      return PERSONAS.find((p) => p.id === store.personaId) || PERSONAS[0];
+    },
+    tierBadge() {
       return (
         {
           public: 'Tier A — Public',
@@ -693,6 +699,9 @@ new Vue({
   methods: {
     onTierChange() {
       applyTierScope();
+    },
+    onPersonaChange(personaId) {
+      loginAsPersona(personaId);
     },
     toggleSubstance(s) {
       const idx = store.filters.substances.indexOf(s);

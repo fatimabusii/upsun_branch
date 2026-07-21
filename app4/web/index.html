@@ -140,7 +140,10 @@
   <div id="app">
     <nav class="sidebar">
       <div class="brand">ASSIST Insights<span>Proof of Concept</span></div>
-      <div class="tier-badge">{{ tierLabel }}</div>
+      <div class="tier-badge">{{ currentPersona.label }}</div>
+      <div v-if="store.personaId !== 'public'" style="padding: 0 22px 16px;">
+        <a href="#" @click.prevent="onPersonaChange('public')" style="font-size: 12px; color: var(--muted); text-decoration: underline;">Log out</a>
+      </div>
       <router-link to="/">Overview</router-link>
       <router-link v-if="showGeography" to="/map">Global Map</router-link>
       <router-link to="/demographics">Demographics</router-link>
@@ -159,27 +162,12 @@
       <div class="topbar" v-if="!store.loading">
         <div class="topbar-row">
           <div>
-            <label>Viewing as</label>
-            <select v-model="store.tier" @change="onTierChange">
-              <option value="public">Tier A — Public</option>
-              <option value="country">Tier B — Country</option>
-              <option value="region">Tier C — Region</option>
-              <option value="global">Tier D — Global</option>
-              <option value="explorer">Tier D+ — Scientific Explorer</option>
+            <label>Log in as</label>
+            <select :value="store.personaId" @change="onPersonaChange($event.target.value)">
+              <option v-for="p in personas" :key="p.id" :value="p.id">{{ p.label }}</option>
             </select>
           </div>
-          <div v-if="store.tier === 'country'">
-            <label>Country</label>
-            <select v-model="store.scopeCountry" @change="onTierChange">
-              <option v-for="c in allCountries" :key="c">{{ c }}</option>
-            </select>
-          </div>
-          <div v-if="store.tier === 'region'">
-            <label>Region</label>
-            <select v-model="store.scopeRegion" @change="onTierChange">
-              <option v-for="r in store.meta.regions" :key="r">{{ r }}</option>
-            </select>
-          </div>
+          <div style="font-size: 11.5px; color: var(--muted);">{{ tierBadge }}</div>
           <button class="toggle-filters" @click="filtersOpen = !filtersOpen">
             {{ filtersOpen ? 'Hide filters' : 'Show filters' }}
           </button>

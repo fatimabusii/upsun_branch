@@ -4,13 +4,31 @@
 // properties. Fine at this dataset size (thousands of rows) — would
 // need server-side filtering at real production scale.
 // ---------------------------------------------------------------------
+// Named personas for the "Log in as" menu. Each bundles a tier with the
+// scope that persona would realistically be locked to, so switching
+// personas sets tier + country/region together in one click.
+// NOTE: this is a demo convenience only — there is no real login and
+// /api/records has no server-side auth. Anyone can still fetch the full
+// dataset directly; this menu only changes what the UI chooses to show.
+const PERSONAS = [
+  { id: 'public', label: 'Public visitor', tier: 'public' },
+  { id: 'sa_moh', label: 'South Africa — Ministry of Health', tier: 'country', scopeCountry: 'South Africa' },
+  { id: 'kenya_moh', label: 'Kenya — Ministry of Health', tier: 'country', scopeCountry: 'Kenya' },
+  { id: 'au', label: 'African Union (regional)', tier: 'region', scopeRegion: 'Africa' },
+  { id: 'oas', label: 'Organization of American States (regional)', tier: 'region', scopeRegion: 'Americas' },
+  { id: 'issup', label: 'ISSUP Leadership (global)', tier: 'global' },
+  { id: 'scientific', label: 'Scientific Explorer (approved researcher)', tier: 'explorer' },
+];
+
 const store = Vue.observable({
   loading: true,
   allRecords: [],
   meta: null,
 
+  personaId: 'public',
+
   // 'public' | 'country' | 'region' | 'global' | 'explorer' (Tier D-Plus)
-  tier: 'global',
+  tier: 'public',
   scopeCountry: 'South Africa',
   scopeRegion: 'Africa',
 
@@ -40,6 +58,18 @@ function loadData() {
     store.meta = meta;
     store.loading = false;
   });
+}
+
+// "Logs in" as a named persona: sets tier + scope in one go, then
+// re-applies the usual tier-based filter locking. Passing 'public'
+// (or omitting personaId) is effectively "log out".
+function loginAsPersona(personaId) {
+  const persona = PERSONAS.find((p) => p.id === personaId) || PERSONAS[0];
+  store.personaId = persona.id;
+  store.tier = persona.tier;
+  if (persona.scopeCountry) store.scopeCountry = persona.scopeCountry;
+  if (persona.scopeRegion) store.scopeRegion = persona.scopeRegion;
+  applyTierScope();
 }
 
 // Applies tier-based scope locking. Called whenever the tier or the
