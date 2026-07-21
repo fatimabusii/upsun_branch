@@ -138,8 +138,8 @@ const Substances = {
   template: `
     <div>
       <h1>Substances</h1>
-      <p class="subtitle">Screening volume per substance, and how often each results in a high-risk score.</p>
-      <div class="grid-2">
+      <p class="subtitle">{{ isPublic ? 'Screening volume per substance.' : 'Screening volume per substance, and how often each results in a high-risk score.' }}</p>
+      <div :class="{ 'grid-2': !isPublic }">
         <div class="card">
           <div class="card-header">
             <h2>Screenings by Substance</h2>
@@ -147,7 +147,7 @@ const Substances = {
           </div>
           <chart-widget :data="volumeData" type="bar"></chart-widget>
         </div>
-        <div class="card">
+        <div class="card" v-if="!isPublic">
           <div class="card-header">
             <h2>% Scored High-Risk</h2>
             <export-bar :rows="riskPctRows" filename="substances-high-risk-pct"></export-bar>
@@ -158,6 +158,7 @@ const Substances = {
     </div>
   `,
   computed: {
+    isPublic() { return store.tier === 'public'; },
     volumeData() { return getSubstanceVolume(); },
     volumeRows() {
       return this.volumeData.labels.map((l, i) => ({ Substance: l, Count: this.volumeData.values[i] }));
@@ -173,7 +174,7 @@ const RiskProfiles = {
   template: `
     <div>
       <h1>Risk Profiles</h1>
-      <p class="subtitle">Risk levels overall, and broken down by substance.</p>
+      <p class="subtitle">{{ isPublic ? 'Overall risk level distribution.' : 'Risk levels overall, and broken down by substance.' }}</p>
       <div class="card">
         <div class="card-header">
           <h2>Overall Risk Levels</h2>
@@ -181,7 +182,7 @@ const RiskProfiles = {
         </div>
         <chart-widget :data="overallData" type="doughnut"></chart-widget>
       </div>
-      <div class="card">
+      <div class="card" v-if="!isPublic">
         <div class="card-header">
           <h2>Risk Level by Substance</h2>
           <export-bar :rows="bySubstanceRows" filename="risk-by-substance"></export-bar>
@@ -193,6 +194,7 @@ const RiskProfiles = {
     </div>
   `,
   computed: {
+    isPublic() { return store.tier === 'public'; },
     overallData() { return getRiskDistribution(); },
     overallRows() {
       return this.overallData.labels.map((l, i) => ({ 'Risk Level': l, Count: this.overallData.values[i] }));
