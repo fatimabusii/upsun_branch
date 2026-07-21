@@ -7,7 +7,6 @@ const filteredMixin = {
 };
 
 const Overview = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Program Overview</h1>
@@ -15,19 +14,19 @@ const Overview = {
       <div class="tiles">
         <div class="tile">
           <div class="label">Total Screenings</div>
-          <div class="value">{{ filtered.length.toLocaleString() }}</div>
+          <div class="value">{{ kpis.totalScreenings.toLocaleString() }}</div>
         </div>
         <div class="tile">
           <div class="label">Countries Active</div>
-          <div class="value">{{ countriesActive }}</div>
+          <div class="value">{{ kpis.countriesActive }}</div>
         </div>
         <div class="tile">
           <div class="label">High-Risk Screens</div>
-          <div class="value">{{ highRiskCount.toLocaleString() }}</div>
+          <div class="value">{{ kpis.highRiskCount.toLocaleString() }}</div>
         </div>
         <div class="tile">
           <div class="label">Most Screened Substance</div>
-          <div class="value" style="font-size: 18px;">{{ topSubstance }}</div>
+          <div class="value" style="font-size: 18px;">{{ kpis.topSubstance }}</div>
         </div>
         <div class="tile">
           <div class="label">Automated Narrative Summary</div>
@@ -55,44 +54,21 @@ const Overview = {
     </div>
   `,
   computed: {
-    countriesActive() {
-      return new Set(this.filtered.map((r) => r.country)).size;
-    },
-    highRiskCount() {
-      return this.filtered.filter((r) => r.riskLevel === 'High').length;
-    },
-    topSubstance() {
-      const c = countBy(this.filtered, (r) => r.substance);
-      if (!c.labels.length) return '—';
-      return c.labels[c.values.indexOf(Math.max(...c.values))];
-    },
-    narrative() {
-      return generateNarrative(this.filtered);
-    },
+    kpis() { return getKpis(); },
+    narrative() { return getNarrative(); },
     summaryRow() {
       return {
-        totalScreenings: this.filtered.length,
-        countriesActive: this.countriesActive,
-        highRiskScreens: this.highRiskCount,
-        topSubstance: this.topSubstance,
+        totalScreenings: this.kpis.totalScreenings,
+        countriesActive: this.kpis.countriesActive,
+        highRiskScreens: this.kpis.highRiskCount,
+        topSubstance: this.kpis.topSubstance,
       };
     },
-    riskData() {
-      return countBy(this.filtered, (r) => r.riskLevel);
-    },
+    riskData() { return getRiskDistribution(); },
     riskRows() {
       return this.riskData.labels.map((l, i) => ({ 'Risk Level': l, Count: this.riskData.values[i] }));
     },
-    trendData() {
-      const total = new Array(12).fill(0);
-      const completed = new Array(12).fill(0);
-      this.filtered.forEach((r) => {
-        const m = new Date(r.date + 'T00:00:00').getMonth();
-        total[m]++;
-        if (r.completed) completed[m]++;
-      });
-      return { labels: MONTHS, series: [{ name: 'Total', values: total }, { name: 'Completed', values: completed }] };
-    },
+    trendData() { return getMonthlyTrend(); },
     trendRows() {
       return this.trendData.labels.map((m, i) => ({
         Month: m,
@@ -104,7 +80,6 @@ const Overview = {
 };
 
 const GlobalMap = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Global Map</h1>
@@ -120,14 +95,11 @@ const GlobalMap = {
     </div>
   `,
   computed: {
-    locations() {
-      return computeLocations(this.filtered, store.meta);
-    },
+    locations() { return getMapLocations(); },
   },
 };
 
 const Demographics = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Demographics</h1>
@@ -151,15 +123,11 @@ const Demographics = {
     </div>
   `,
   computed: {
-    ageData() {
-      return countBy(this.filtered, (r) => r.ageGroup);
-    },
+    ageData() { return getAgeGroup(); },
     ageRows() {
       return this.ageData.labels.map((l, i) => ({ 'Age Group': l, Count: this.ageData.values[i] }));
     },
-    genderData() {
-      return countBy(this.filtered, (r) => r.gender);
-    },
+    genderData() { return getGender(); },
     genderRows() {
       return this.genderData.labels.map((l, i) => ({ Gender: l, Count: this.genderData.values[i] }));
     },
@@ -167,7 +135,6 @@ const Demographics = {
 };
 
 const Substances = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Substances</h1>
@@ -191,20 +158,11 @@ const Substances = {
     </div>
   `,
   computed: {
-    volumeData() {
-      return countBy(this.filtered, (r) => r.substance);
-    },
+    volumeData() { return getSubstanceVolume(); },
     volumeRows() {
       return this.volumeData.labels.map((l, i) => ({ Substance: l, Count: this.volumeData.values[i] }));
     },
-    riskPctData() {
-      const labels = this.volumeData.labels;
-      const values = labels.map((s) => {
-        const subset = this.filtered.filter((r) => r.substance === s);
-        return pct(subset.filter((r) => r.riskLevel === 'High').length, subset.length);
-      });
-      return { labels, values };
-    },
+    riskPctData() { return getSubstanceHighRiskPct(); },
     riskPctRows() {
       return this.riskPctData.labels.map((l, i) => ({ Substance: l, '% High Risk': this.riskPctData.values[i] }));
     },
@@ -212,7 +170,6 @@ const Substances = {
 };
 
 const RiskProfiles = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Risk Profiles</h1>
@@ -236,21 +193,11 @@ const RiskProfiles = {
     </div>
   `,
   computed: {
-    overallData() {
-      return countBy(this.filtered, (r) => r.riskLevel);
-    },
+    overallData() { return getRiskDistribution(); },
     overallRows() {
       return this.overallData.labels.map((l, i) => ({ 'Risk Level': l, Count: this.overallData.values[i] }));
     },
-    bySubstanceData() {
-      const substances = countBy(this.filtered, (r) => r.substance).labels;
-      const levels = ['Low', 'Moderate', 'High'];
-      const series = levels.map((lvl) => ({
-        name: lvl,
-        values: substances.map((s) => this.filtered.filter((r) => r.substance === s && r.riskLevel === lvl).length),
-      }));
-      return { labels: substances, series };
-    },
+    bySubstanceData() { return getRiskBySubstance(); },
     bySubstanceRows() {
       return this.bySubstanceData.labels.map((l, i) => {
         const row = { Substance: l };
@@ -367,7 +314,6 @@ const Comparative = {
 };
 
 const Funnel = {
-  mixins: [filteredMixin],
   template: `
     <div>
       <h1>Screening Funnel</h1>
@@ -385,20 +331,9 @@ const Funnel = {
     </div>
   `,
   computed: {
-    selfStages() {
-      const recs = this.filtered.filter((r) => r.screeningMode === 'Self-Screen');
-      return [
-        { label: 'Started', value: recs.length },
-        { label: 'Completed', value: recs.filter((r) => r.completed).length },
-      ];
-    },
-    practitionerStages() {
-      const recs = this.filtered.filter((r) => r.screeningMode === 'Practitioner-Assisted');
-      return [
-        { label: 'Started', value: recs.length },
-        { label: 'Completed', value: recs.filter((r) => r.completed).length },
-      ];
-    },
+    stages() { return getFunnelStages(); },
+    selfStages() { return this.stages.selfScreen; },
+    practitionerStages() { return this.stages.practitioner; },
   },
 };
 
@@ -729,6 +664,6 @@ new Vue({
     },
   },
   mounted() {
-    loadData().then(() => applyTierScope());
+    loginAsPersona(store.personaId);
   },
 }).$mount('#app');

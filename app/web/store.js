@@ -23,6 +23,10 @@ const PERSONAS = [
 const store = Vue.observable({
   loading: true,
   allRecords: [],
+  // For Public tier: pre-aggregated data from /api/summary. For all other
+  // tiers this stays null and pages compute their own aggregates from
+  // allRecords via filterRecords + countBy etc.
+  summary: null,
   meta: null,
 
   personaId: 'public',
@@ -49,20 +53,44 @@ const store = Vue.observable({
   },
 });
 
+// Fetches meta once, plus either the summary or a scope-limited row
+// set, depending on the current persona's tier. This is the real
+// network-level data boundary:
+//   Public → /api/summary (aggregated, no rows)
+//   Country/Region → /api/records?scope_type=…&scope_value=… (rows within scope only)
+//   Global/Explorer → /api/records (everything)
 function loadData() {
-  return Promise.all([
-    fetch('/api/records').then((r) => r.json()),
-    fetch('/api/meta').then((r) => r.json()),
-  ]).then(([records, meta]) => {
-    store.allRecords = records;
+  const persona = PERSONAS.find((p) => p.id === store.personaId) || PERSONAS[0];
+  store.loading = true;
+
+  const metaP = fetch('/api/meta').then((r) => r.json());
+
+  if (persona.tier === 'public') {
+    return Promise.all([metaP, fetch('/api/summary').then((r) => r.json())]).then(([meta, summary]) => {
+      store.meta = meta;
+      store.summary = summary;
+      store.allRecords = [];
+      store.loading = false;
+    });
+  }
+
+  let url = '/api/records';
+  if (persona.tier === 'country') {
+    url += '?scope_type=country&scope_value=' + encodeURIComponent(persona.scopeCountry || store.scopeCountry);
+  } else if (persona.tier === 'region') {
+    url += '?scope_type=region&scope_value=' + encodeURIComponent(persona.scopeRegion || store.scopeRegion);
+  }
+  return Promise.all([metaP, fetch(url).then((r) => r.json())]).then(([meta, records]) => {
     store.meta = meta;
+    store.allRecords = records;
+    store.summary = null;
     store.loading = false;
   });
 }
 
 // "Logs in" as a named persona: sets tier + scope in one go, then
-// re-applies the usual tier-based filter locking. Passing 'public'
-// (or omitting personaId) is effectively "log out".
+// re-applies the usual tier-based filter locking and re-fetches data
+// from the correct endpoint for the new tier.
 function loginAsPersona(personaId) {
   const persona = PERSONAS.find((p) => p.id === personaId) || PERSONAS[0];
   store.personaId = persona.id;
@@ -70,6 +98,7 @@ function loginAsPersona(personaId) {
   if (persona.scopeCountry) store.scopeCountry = persona.scopeCountry;
   if (persona.scopeRegion) store.scopeRegion = persona.scopeRegion;
   applyTierScope();
+  return loadData();
 }
 
 // Applies tier-based scope locking. Called whenever the tier or the
@@ -179,6 +208,114 @@ function crossTab(records, rowKeyFn, colKeyFn) {
 function pct(part, total) {
   if (!total) return 0;
   return Math.round((part / total) * 1000) / 10;
+}
+
+// ---------------------------------------------------------------------
+// Source-agnostic view getters. Every page that's visible at Public
+// tier calls these instead of computing directly, so it works whether
+// the data came pre-aggregated from /api/summary (Public) or has to be
+// computed from filtered rows (every other tier).
+// ---------------------------------------------------------------------
+
+function filteredOrEmpty() {
+  return filterRecords(store.allRecords, store.filters);
+}
+
+function getKpis() {
+  if (store.summary) return store.summary.kpis;
+  const f = filteredOrEmpty();
+  const subCounts = countBy(f, (r) => r.substance);
+  const topIdx = subCounts.values.length ? subCounts.values.indexOf(Math.max(...subCounts.values)) : -1;
+  return {
+    totalScreenings: f.length,
+    countriesActive: new Set(f.map((r) => r.country)).size,
+    highRiskCount: f.filter((r) => r.riskLevel === 'High').length,
+    topSubstance: topIdx >= 0 ? subCounts.labels[topIdx] : '—',
+  };
+}
+
+function getRiskDistribution() {
+  if (store.summary) return store.summary.riskDistribution;
+  return countBy(filteredOrEmpty(), (r) => r.riskLevel);
+}
+
+function getSubstanceVolume() {
+  if (store.summary) return store.summary.substanceVolume;
+  return countBy(filteredOrEmpty(), (r) => r.substance);
+}
+
+function getSubstanceHighRiskPct() {
+  if (store.summary) return store.summary.substanceHighRiskPct;
+  const f = filteredOrEmpty();
+  const vol = countBy(f, (r) => r.substance);
+  const values = vol.labels.map((s) => {
+    const sub = f.filter((r) => r.substance === s);
+    return pct(sub.filter((r) => r.riskLevel === 'High').length, sub.length);
+  });
+  return { labels: vol.labels, values };
+}
+
+function getRiskBySubstance() {
+  if (store.summary) return store.summary.riskBySubstance;
+  const f = filteredOrEmpty();
+  const substances = countBy(f, (r) => r.substance).labels;
+  const levels = ['Low', 'Moderate', 'High'];
+  return {
+    labels: substances,
+    series: levels.map((lvl) => ({
+      name: lvl,
+      values: substances.map((s) => f.filter((r) => r.substance === s && r.riskLevel === lvl).length),
+    })),
+  };
+}
+
+function getAgeGroup() {
+  if (store.summary) return store.summary.ageGroup;
+  return countBy(filteredOrEmpty(), (r) => r.ageGroup);
+}
+
+function getGender() {
+  if (store.summary) return store.summary.gender;
+  return countBy(filteredOrEmpty(), (r) => r.gender);
+}
+
+function getMonthlyTrend() {
+  if (store.summary) return store.summary.monthlyTrend;
+  const total = new Array(12).fill(0);
+  const completed = new Array(12).fill(0);
+  filteredOrEmpty().forEach((r) => {
+    const m = new Date(r.date + 'T00:00:00').getMonth();
+    total[m]++;
+    if (r.completed) completed[m]++;
+  });
+  return { labels: MONTHS, series: [{ name: 'Total', values: total }, { name: 'Completed', values: completed }] };
+}
+
+function getMapLocations() {
+  if (store.summary) return store.summary.mapLocations;
+  return computeLocations(filteredOrEmpty(), store.meta);
+}
+
+function getFunnelStages() {
+  if (store.summary) return store.summary.funnel;
+  const f = filteredOrEmpty();
+  const self = f.filter((r) => r.screeningMode === 'Self-Screen');
+  const prac = f.filter((r) => r.screeningMode === 'Practitioner-Assisted');
+  return {
+    selfScreen: [
+      { label: 'Started', value: self.length },
+      { label: 'Completed', value: self.filter((r) => r.completed).length },
+    ],
+    practitioner: [
+      { label: 'Started', value: prac.length },
+      { label: 'Completed', value: prac.filter((r) => r.completed).length },
+    ],
+  };
+}
+
+function getNarrative() {
+  if (store.summary) return store.summary.narrative;
+  return generateNarrative(filteredOrEmpty());
 }
 
 function generateNarrative(records) {

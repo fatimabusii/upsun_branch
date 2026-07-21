@@ -2,67 +2,7 @@ applications:
   app1:
     type: 'golang:1.22'
     source:
-      root: 'app1'
-
-    hooks:
-      build: |
-        go build -o bin/app .
-
-    web:
-      upstream:
-        socket_family: tcp
-        protocol: http
-      commands:
-        start: ./bin/app
-      locations:
-        '/':
-          allow: false
-          passthru: true
-
-  app2:
-    type: 'golang:1.22'
-    source:
-      root: 'app2'
-
-    hooks:
-      build: |
-        go build -o bin/app .
-
-    web:
-      upstream:
-        socket_family: tcp
-        protocol: http
-      commands:
-        start: ./bin/app
-      locations:
-        '/':
-          allow: false
-          passthru: true
-
-  app3:
-    type: 'golang:1.22'
-    source:
-      root: 'app3'
-
-    hooks:
-      build: |
-        go build -o bin/app .
-
-    web:
-      upstream:
-        socket_family: tcp
-        protocol: http
-      commands:
-        start: ./bin/app
-      locations:
-        '/':
-          allow: false
-          passthru: true
-
-  app4:
-    type: 'golang:1.22'
-    source:
-      root: 'app4'
+      root: 'app'
 
     hooks:
       build: |
