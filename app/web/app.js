@@ -345,7 +345,7 @@ const Cohorts = {
     <div>
       <h1>Cohort Analytics</h1>
       <p class="subtitle">Adolescents vs. adults vs. older adults, and the screening pathway from risk to suggested intervention.</p>
-      <p class="card-note">Note: this tool's youngest bracket is 12-17, so there's no under-12 "children" cohort in the data.</p>
+      <p class="card-note">Cohorts are derived from the assessment type completed (Child / Adolescent / Adult).</p>
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
@@ -376,7 +376,7 @@ const Cohorts = {
       return this.totalsData.labels.map((l, i) => ({ Cohort: l, Count: this.totalsData.values[i] }));
     },
     byRiskData() {
-      const cohorts = ['Adolescents', 'Adults', 'Older Adults'];
+      const cohorts = ['Children', 'Adolescents', 'Adults'];
       const levels = ['Low', 'Moderate', 'High'];
       const series = levels.map((lvl) => ({
         name: lvl,

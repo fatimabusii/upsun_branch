@@ -231,8 +231,11 @@ function getKpis() {
   const f = filteredOrEmpty();
   const subCounts = countBy(f, (r) => r.substance);
   const topIdx = subCounts.values.length ? subCounts.values.indexOf(Math.max(...subCounts.values)) : -1;
+  // Count distinct assessments, not substance rows. One assessment can
+  // score multiple substances, so len(f) overcounts by ~2.5x on real data.
+  const distinctAssessments = new Set(f.map((r) => r.id)).size;
   return {
-    totalScreenings: f.length,
+    totalScreenings: distinctAssessments,
     countriesActive: new Set(f.map((r) => r.country)).size,
     highRiskCount: f.filter((r) => r.riskLevel === 'High').length,
     topSubstance: topIdx >= 0 ? subCounts.labels[topIdx] : '—',
@@ -325,9 +328,9 @@ function getNarrative() {
 
 function generateNarrative(records) {
   if (!records.length) return 'No screenings match the current filters.';
-  const total = records.length;
+  const assessmentCount = new Set(records.map((r) => r.id)).size;
   const highRisk = records.filter((r) => r.riskLevel === 'High').length;
-  const highRiskPct = pct(highRisk, total);
+  const highRiskPct = pct(highRisk, records.length);
 
   const subCounts = countBy(records, (r) => r.substance);
   const topIdx = subCounts.values.indexOf(Math.max(...subCounts.values));
@@ -338,12 +341,12 @@ function generateNarrative(records) {
   if (adolescents.length) {
     const adoCounts = countBy(adolescents, (r) => r.substance);
     const adoTopIdx = adoCounts.values.indexOf(Math.max(...adoCounts.values));
-    adolescentLine = ` Among adolescents (12–17), ${adoCounts.labels[adoTopIdx]} was the most frequently screened substance.`;
+    adolescentLine = ` Among adolescents, ${adoCounts.labels[adoTopIdx]} was the most frequently screened substance.`;
   }
 
   return (
-    `Within the current filters, ${total.toLocaleString()} screenings were recorded. ` +
-    `${topSubstance} was the most commonly screened substance, and ${highRiskPct}% of screenings were classified high-risk.` +
+    `Within the current filters, ${assessmentCount.toLocaleString()} screenings were completed. ` +
+    `${topSubstance} was the most commonly screened substance, and ${highRiskPct}% of substance results were classified high-risk.` +
     adolescentLine
   );
 }

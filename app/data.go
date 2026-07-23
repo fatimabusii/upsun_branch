@@ -470,15 +470,16 @@ func buildSummary(recs []Record) Summary {
 	// Narrative
 	narrative := "No screenings match the current scope."
 	if len(recs) > 0 {
+		assessmentCount := countDistinctAssessments(recs)
 		narrative = "Within the current scope, " +
-			strconv.Itoa(len(recs)) + " screenings were recorded. " +
+			strconv.Itoa(assessmentCount) + " screenings were completed. " +
 			topSubstance + " was the most commonly screened substance, and " +
-			strconv.FormatFloat(pct(highRisk, len(recs)), 'f', -1, 64) + "% of screenings were classified high-risk."
+			strconv.FormatFloat(pct(highRisk, len(recs)), 'f', -1, 64) + "% of substance results were classified high-risk."
 	}
 
 	return Summary{
 		Kpis: Kpis{
-			TotalScreenings: len(recs),
+			TotalScreenings: countDistinctAssessments(recs),
 			CountriesActive: len(countrySet),
 			HighRiskCount:   highRisk,
 			TopSubstance:    topSubstance,
@@ -552,6 +553,7 @@ func metaHandler(w http.ResponseWriter, r *http.Request) {
 
 func registerAPIRoutes() {
 	generateRecords()
+	maybeLoadRealData()
 	http.HandleFunc("/api/records", recordsHandler)
 	http.HandleFunc("/api/meta", metaHandler)
 	http.HandleFunc("/api/summary", summaryHandler)
