@@ -2,6 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -202,12 +205,63 @@ func countDistinctAssessments(recs []Record) int {
 	return len(seen)
 }
 
+// upsunRelationship mirrors the fields Upsun/Platform.sh includes for a
+// database relationship inside PLATFORM_RELATIONSHIPS. Only the fields
+// needed to build a DSN are declared; extra JSON fields are ignored.
+type upsunRelationship struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Path     string `json:"path"` // database name
+}
+
+// resolveDSN decides how to connect to the database:
+//  1. If DB_DSN is set (local dev), use it as-is.
+//  2. Otherwise, if PLATFORM_RELATIONSHIPS is set (running on Upsun),
+//     decode it and build a DSN from the "db" relationship — this must
+//     match the relationship name declared in .upsun/config.yaml
+//     (relationships: { db: 'db:mysql' }).
+//  3. If neither is set, returns "" — caller falls back to synthetic data.
+func resolveDSN() string {
+	if dsn := os.Getenv("DB_DSN"); dsn != "" {
+		return dsn
+	}
+
+	encoded := os.Getenv("PLATFORM_RELATIONSHIPS")
+	if encoded == "" {
+		return ""
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		log.Printf("db: failed to base64-decode PLATFORM_RELATIONSHIPS: %v", err)
+		return ""
+	}
+
+	var relationships map[string][]upsunRelationship
+	if err := json.Unmarshal(decoded, &relationships); err != nil {
+		log.Printf("db: failed to parse PLATFORM_RELATIONSHIPS JSON: %v", err)
+		return ""
+	}
+
+	dbConns, ok := relationships["db"]
+	if !ok || len(dbConns) == 0 {
+		log.Println("db: no 'db' relationship found in PLATFORM_RELATIONSHIPS — check .upsun/config.yaml relationships block matches")
+		return ""
+	}
+
+	c := dbConns[0]
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", c.Username, c.Password, c.Host, c.Port, c.Path)
+}
+
 // maybeLoadRealData: called from main() before route registration.
-// Reads DB_DSN, loads real data if set, else keeps the synthetic slice.
+// Resolves a DSN (local DB_DSN, or Upsun's PLATFORM_RELATIONSHIPS) and
+// loads real data if one is found, else keeps the synthetic slice.
 func maybeLoadRealData() {
-	dsn := os.Getenv("DB_DSN")
+	dsn := resolveDSN()
 	if dsn == "" {
-		log.Println("DB_DSN not set — using synthetic data")
+		log.Println("no DB_DSN or PLATFORM_RELATIONSHIPS found — using synthetic data")
 		return
 	}
 	real, err := loadRecordsFromDB(dsn)

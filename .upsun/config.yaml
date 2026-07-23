@@ -4,6 +4,9 @@ applications:
     source:
       root: 'app'
 
+    relationships:
+      db: 'db:mysql'
+
     hooks:
       build: |
         go build -o bin/app .
@@ -18,6 +21,10 @@ applications:
         '/':
           allow: false
           passthru: true
+
+services:
+  db:
+    type: mariadb:11.4
 
 routes:
   "https://{default}/":
